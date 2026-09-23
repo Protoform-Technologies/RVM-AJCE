@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, Leaf } from 'lucide-react';
+import { ArrowRight, Leaf, RefreshCw, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -178,100 +178,111 @@ export default function CashcrowRewardPage() {
         </section>
 
         {/* Illustration */}
-        <section
-          aria-label="Reward illustration"
-          className="relative mx-auto my-4 h-52 w-full max-w-sm sm:my-6"
-        >
-          {/* Decorative sparkles */}
-          <span
-            aria-hidden="true"
-            className="absolute left-[25%] top-2 text-xl font-bold text-[#bbf42f]"
-          >
-            ✦
-          </span>
+        <div className="relative w-full max-w-xl mx-auto h-72 rounded-2xl p-6 overflow-hidden flex items-center justify-center font-sans select-none">
 
-          <span
-            aria-hidden="true"
-            className="absolute bottom-6 right-[10%] text-lg font-bold text-[#0b4d36]"
-          >
-            ✦
-          </span>
+          {/* Background Soft Blobs */}
+          <div className="absolute top-2 left-4 w-28 h-20 bg-[#e3f4d7] rounded-full filter blur-xl opacity-70" />
+          <div className="absolute top-1/2 right-12 w-32 h-32 bg-[#e3f4d7] rounded-full filter blur-xl opacity-60" />
+          <div className="absolute bottom-2 left-8 w-24 h-24 bg-[#eae1f8] rounded-full filter blur-xl opacity-60" />
 
-          <span
-            aria-hidden="true"
-            className="absolute bottom-0 right-[22%] text-4xl font-bold text-[#bbf42f]"
-          >
-            ✦
-          </span>
+          {/* Decorative Sparkles */}
+          <div className="absolute top-6 left-36 text-[#a3e635]">
+            <Sparkles className="w-7 h-7 fill-[#a3e635] stroke-none animate-pulse" />
+          </div>
+          <div className="absolute bottom-6 right-28 text-[#a3e635]">
+            <Sparkles className="w-8 h-8 fill-[#a3e635] stroke-none animate-pulse" />
+          </div>
+          <div className="absolute bottom-20 right-16 text-[#065f46]">
+            <Sparkles className="w-6 h-6 fill-[#065f46] stroke-none" />
+          </div>
 
-          {/* Bottle */}
-          <div
-            aria-hidden="true"
-            className="absolute bottom-4 left-[8%] flex h-40 w-20 -rotate-12 flex-col items-center justify-between rounded-b-xl rounded-t-3xl border-2 border-[#0b4d36] bg-[#a6e8c7]/40 p-2 shadow-sm"
-          >
-            <div className="-mt-5 h-4 w-8 rounded-sm bg-[#0b4d36]" />
-
-            <div className="my-auto flex w-full flex-col gap-1 opacity-40">
-              <span className="h-1 w-full rounded bg-[#0b4d36]" />
-              <span className="h-1 w-full rounded bg-[#0b4d36]" />
-              <span className="h-1 w-full rounded bg-[#0b4d36]" />
-            </div>
-
-            <div className="absolute -left-4 top-12 flex flex-col gap-1.5">
-              <span className="h-0.5 w-2.5 rounded-full bg-[#0f2e24]" />
-              <span className="h-0.5 w-3.5 rounded-full bg-[#0f2e24]" />
-              <span className="h-0.5 w-2 rounded-full bg-[#0f2e24]" />
+          {/* "NICE MOVE!" Sticker Badge (Fixed Top-Right) */}
+          <div className="absolute top-4 right-4 z-30 rotate-6 transform">
+            <div className="bg-[#ddd6fe] text-[#2e1065] px-4 py-2.5 rounded-2xl shadow-md border-2 border-[#c4b5fd] text-center font-black tracking-wider leading-none">
+              <span className="block text-sm transform -rotate-1">NICE</span>
+              <span className="block text-base tracking-widest mt-0.5">MOVE!</span>
+              <div className="w-full h-1 bg-[#2e1065] rounded-full mt-1" />
             </div>
           </div>
 
-          {/* Reward voucher */}
-          <div
-            aria-hidden="true"
-            className="absolute left-1/2 top-1/2 z-10 flex h-36 w-[min(16rem,72vw)] -translate-x-1/2 -translate-y-1/2 -rotate-6 items-center justify-between overflow-hidden rounded-2xl border-2 border-[#0f2e24] bg-[#0b4d36] p-4 shadow-xl"
-          >
-            {/* Notches */}
-            <span className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-r-2 border-[#0f2e24] bg-[#f3f7f0]" />
+          {/* Main Container */}
+          <div className="relative w-full flex items-center justify-center">
 
-            <span className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-l-2 border-[#0f2e24] bg-[#f3f7f0]" />
-
-            {/* Recycle icon */}
-            <div className="ml-3 text-[#bbf42f]">
-              <RecycleIcon className="h-14 w-14 sm:h-16 sm:w-16" />
-            </div>
-
-            {/* Face */}
-            <div className="mr-4 flex flex-col items-center gap-1">
-              <div className="flex gap-4">
-                <span className="h-2.5 w-2.5 rounded-full bg-black" />
-                <span className="h-2.5 w-2.5 rounded-full bg-black" />
+            {/* Plastic Bottle (Left) */}
+            <div className="relative -mr-10 z-0 flex items-center">
+              {/* Action Marks around Bottle */}
+              <div className="absolute left-0 top-6 flex flex-col space-y-1 rotate-180">
+                <div className="w-3 h-1 bg-[#065f46] rounded-full -rotate-12" />
+                <div className="w-4 h-1 bg-[#065f46] rounded-full" />
+                <div className="w-3 h-1 bg-[#065f46] rounded-full rotate-12" />
               </div>
 
-              <div className="mt-0.5 h-4 w-8 rounded-full border-b-[3px] border-black" />
+              {/* SVG Plastic Bottle Design */}
+              <svg className="w-24 h-48 drop-shadow-sm opacity-90" viewBox="0 0 100 200">
+                {/* Cap */}
+                <rect x="35" y="10" width="30" height="18" rx="3" fill="#047857" />
+                <rect x="32" y="28" width="36" height="4" fill="#065f46" />
+                {/* Bottle Body */}
+                <path
+                  d="M38 32 C38 40 25 50 25 70 L25 160 C25 175 35 185 50 185 C65 185 75 175 75 160 L75 70 C75 50 62 40 62 32 Z"
+                  fill="#a7f3d0"
+                  stroke="#059669"
+                  strokeWidth="2.5"
+                />
+                {/* Highlights & Grooves */}
+                <path d="M30 85 C45 92 55 92 70 85" stroke="#059669" strokeWidth="2" fill="none" opacity="0.6" />
+                <path d="M28 115 C45 122 55 122 72 115" stroke="#059669" strokeWidth="2" fill="none" opacity="0.6" />
+                <path d="M30 145 C45 152 55 152 70 145" stroke="#059669" strokeWidth="2" fill="none" opacity="0.6" />
+                <path d="M32 55 Q30 100 35 165" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" opacity="0.7" fill="none" />
+              </svg>
+            </div>
 
-              <div className="-mt-3.5 flex w-12 justify-between">
-                <span className="h-1 w-2 rounded-full bg-[#ff8b8b]" />
-                <span className="h-1 w-2 rounded-full bg-[#ff8b8b]" />
+            {/* Green Recycling Ticket (Center) */}
+            <div className="relative z-10 -rotate-6 transform">
+              {/* Ticket Body with True Mask Cutouts */}
+              <div
+                className="relative w-80 h-40 bg-gradient-to-br from-[#10b981] via-[#059669] to-[#047857] rounded-2xl p-4 flex items-center justify-between"
+                style={{
+                  maskImage:
+                    'radial-gradient(circle 14px at 0% 50%, transparent 99%, black 100%), radial-gradient(circle 14px at 100% 50%, transparent 99%, black 100%)',
+                  WebkitMaskImage:
+                    'radial-gradient(circle 14px at 0% 50%, transparent 99%, black 100%), radial-gradient(circle 14px at 100% 50%, transparent 99%, black 100%)',
+                  maskComposite: 'intersect',
+                  WebkitMaskComposite: 'source-in',
+                }}
+              >
+                {/* Dotted Perforated Line */}
+                <div className="absolute right-12 top-2 bottom-2 border-r-2 border-dashed border-[#065f46]/40" />
+
+                {/* Recycle Symbol (Left Side of Ticket) */}
+                <div className="flex-1 flex justify-center items-center pl-2">
+                  <div className="p-3 bg-[#a3e635] rounded-full shadow-inner">
+                    <RefreshCw className="w-12 h-12 text-[#047857] stroke-[2.5]" />
+                  </div>
+                </div>
+
+                {/* Cute Character Face (Center of Ticket) */}
+                <div className="flex-1 flex flex-col items-center justify-center pr-8 space-y-1">
+                  <div className="flex space-x-4 items-center">
+                    {/* Left Cheek */}
+                    <div className="w-3 h-1.5 bg-[#bef264] rounded-full" />
+                    {/* Eyes */}
+                    <div className="flex space-x-3">
+                      <div className="w-3 h-3 border-t-3 border-r-3 border-[#022c22] rounded-tr-full transform -rotate-45" />
+                      <div className="w-3 h-3 border-t-3 border-r-3 border-[#022c22] rounded-tr-full transform -rotate-45" />
+                    </div>
+                    {/* Right Cheek */}
+                    <div className="w-3 h-1.5 bg-[#bef264] rounded-full" />
+                  </div>
+                  {/* Smile */}
+                  <div className="w-4 h-2 border-b-3 border-[#022c22] rounded-b-full" />
+                </div>
+
               </div>
             </div>
 
-            {/* Dashed divider */}
-            <div className="absolute bottom-0 right-14 top-0 border-r-2 border-dashed border-[#0f2e24]/40" />
           </div>
-
-          {/* Sticker */}
-          <div
-            aria-hidden="true"
-            className="absolute right-[4%] top-1 z-20 rotate-6 rounded-xl border-2 border-[#0f2e24] bg-[#d8c7ff] px-3 py-1.5 shadow-md"
-          >
-            <p className="text-center text-sm font-black leading-tight text-[#0f2e24]">
-              NICE
-              <br />
-              MOVE!
-            </p>
-
-            <div className="mt-0.5 h-1 w-full rounded-full bg-[#0f2e24]" />
-          </div>
-        </section>
+        </div>
 
         {/* Reward form */}
         <section
@@ -363,7 +374,7 @@ export default function CashcrowRewardPage() {
 
             <button
               type="submit"
-              className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#003f2b] bg-[#007a52] px-4 py-3.5 text-lg font-black text-white shadow-[0_4px_0_0_#063324] transition-all hover:bg-[#006644] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:translate-y-1 active:shadow-none"
+              className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#003f2b] bg-[#007a52] px-4 py-3.5 text-lg font-black text-white shadow-[0_4px_0_0_#063324] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:translate-y-1 active:shadow-none"
             >
               <span>Claim my reward</span>
 
