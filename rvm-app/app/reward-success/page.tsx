@@ -242,13 +242,6 @@ export default function RewardSuccessPage() {
                     aria-labelledby="feedback-heading"
                     className="mt-6 w-full text-center"
                 >
-                    <h2
-                        id="feedback-heading"
-                        className="text-xs font-bold text-[#082e21]/80 sm:text-sm"
-                    >
-                        Help make the next good move better.
-                    </h2>
-
                     <a
                         href="https://forms.google.com"
                         target="_blank"
