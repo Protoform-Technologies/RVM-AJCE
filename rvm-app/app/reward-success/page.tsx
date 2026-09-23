@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
+    Check,
     ExternalLink,
     Link as LinkIcon,
     MessageSquare,
@@ -34,59 +35,69 @@ export default function RewardSuccessPage() {
                     className="mt-2 flex w-full flex-col items-center text-center"
                 >
                     {/* Celebration illustration */}
-                    <div className="relative flex h-36 w-48 items-center justify-center">
-                        {/* --- CONFETTI / BURST PILLS --- */}
-                        <span className="absolute left-7 top-3 h-4.5 w-2 rotate-[-25deg] rounded-full bg-[#bdf354]" />
-                        <span className="absolute left-1 top-10 h-4.5 w-2 rotate-[-65deg] rounded-full bg-[#c28aff]" />
-                        <span className="absolute left-20 top-1 h-5 w-2 rotate-[10deg] rounded-full bg-[#bdf354]" />
-                        <span className="absolute right-9 top-3 h-5 w-2 rotate-[45deg] rounded-full bg-[#c28aff]" />
-                        <span className="absolute right-1 top-14 h-2 w-4.5 rotate-[-10deg] rounded-full bg-[#bdf354]" />
-                        <span className="absolute bottom-4 right-7 h-4.5 w-2 rotate-[-35deg] rounded-full bg-[#c28aff]" />
-                        <span className="absolute bottom-2 left-12 h-4.5 w-2 rotate-[35deg] rounded-full bg-[#bdf354]" />
+                    <div className="relative w-full max-w-sm mx-auto h-36 rounded-xl p-4 overflow-hidden flex items-center justify-center font-sans select-none bg-[#faf9f5]">
 
-                        {/* --- MASCOT CONTAINER --- */}
+                        {/* Background Soft Blobs */}
+                        <div className="absolute top-1 left-2 w-20 h-14 bg-[#e3f4d7] rounded-full filter blur-lg opacity-70" />
+                        <div className="absolute top-1/2 right-8 w-20 h-20 bg-[#eae1f8] rounded-full filter blur-lg opacity-60" />
+
+                        {/* Main Illustration Container */}
                         <div className="relative flex items-center justify-center">
-                            <div className="absolute -left-4 -top-3 flex flex-col items-center">
-                                <div className="h-3 w-3 rounded-full border-[1.5px] border-[#052e16] bg-[#052e16]" />
-                                <div className="h-6 w-4 -translate-y-0.5 rounded-bl-full border-b-[3px] border-l-[3px] border-[#052e16]" />
+
+                            {/* Confetti / Burst Pills */}
+                            <div className="absolute -top-6 -left-6 w-1.5 h-4 bg-[#ccfbf1] rounded-full -rotate-45" />
+                            <div className="absolute -top-7 left-2 w-1.5 h-4 bg-[#bef264] rounded-full rotate-12" />
+                            <div className="absolute -top-4 right-0 w-1.5 h-4 bg-[#ddd6fe] rounded-full rotate-45" />
+                            <div className="absolute top-5 -left-8 w-1.5 h-4 bg-[#ddd6fe] rounded-full rotate-45" />
+                            <div className="absolute -bottom-6 -left-3 w-1.5 h-4 bg-[#bef264] rounded-full rotate-45" />
+                            <div className="absolute -bottom-7 right-4 w-1.5 h-4 bg-[#bef264] rounded-full -rotate-12" />
+                            <div className="absolute bottom-1 right-[-1.5rem] w-1.5 h-4 bg-[#ddd6fe] rounded-full rotate-45" />
+
+                            {/* Raised Arm (Left) */}
+                            <div className="absolute -left-5 top-0 z-0">
+                                <svg className="w-7 h-8 text-[#064e3b]" viewBox="0 0 50 60" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M 40 45 C 15 45, 10 25, 15 15" />
+                                    <circle cx="15" cy="12" r="6" fill="#064e3b" stroke="none" />
+                                </svg>
                             </div>
 
-                            <div className="absolute -right-4 -top-6 flex flex-col items-center">
-                                <div className="h-3 w-3 rounded-full border-[1.5px] border-[#052e16] bg-[#052e16]" />
-                                <div className="h-7 w-4 -translate-y-0.5 rounded-br-full border-b-[3px] border-r-[3px] border-[#052e16]" />
+                            {/* Raised Arm (Right) */}
+                            <div className="absolute -right-4 -top-3 z-0">
+                                <svg className="w-7 h-8 text-[#064e3b]" viewBox="0 0 50 60" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M 10 45 C 35 45, 40 25, 35 15" />
+                                    <circle cx="35" cy="12" r="6" fill="#064e3b" stroke="none" />
+                                </svg>
                             </div>
 
-                            <div className="relative z-10 flex h-18 w-28 rotate-[-6deg] items-center justify-center rounded-xl border-2 border-[#052e16] bg-[#0f9f59] shadow-sm">
-                                <span className="absolute -left-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-r-2 border-[#052e16] bg-[#f8fbf6]" />
-                                <span className="absolute -left-1.5 bottom-1.5 h-2.5 w-2.5 rounded-full border-r-2 border-[#052e16] bg-[#f8fbf6]" />
-                                <span className="absolute -right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-l-2 border-[#052e16] bg-[#f8fbf6]" />
-                                <span className="absolute -right-1.5 bottom-1.5 h-2.5 w-2.5 rounded-full border-l-2 border-[#052e16] bg-[#f8fbf6]" />
+                            {/* Scaled Down Character Ticket Body */}
+                            <div
+                                className="relative w-24 h-16 bg-gradient-to-br from-[#10b981] via-[#059669] to-[#047857] rounded-lg p-2 flex flex-col items-center justify-center -rotate-6 shadow-sm z-10"
+                                style={{
+                                    maskImage:
+                                        'radial-gradient(circle 6px at 0% 50%, transparent 99%, black 100%), radial-gradient(circle 6px at 100% 50%, transparent 99%, black 100%)',
+                                    WebkitMaskImage:
+                                        'radial-gradient(circle 6px at 0% 50%, transparent 99%, black 100%), radial-gradient(circle 6px at 100% 50%, transparent 99%, black 100%)',
+                                    maskComposite: 'intersect',
+                                    WebkitMaskComposite: 'source-in',
+                                }}
+                            >
+                                {/* Eyes */}
+                                <div className="flex space-x-2.5 mb-0.5">
+                                    <div className="w-2.5 h-2 border-t-2 border-r-2 border-[#022c22] rounded-tr-full transform -rotate-45" />
+                                    <div className="w-2.5 h-2 border-t-2 border-r-2 border-[#022c22] rounded-tr-full transform -rotate-45" />
+                                </div>
 
-                                <div className="flex flex-col items-center gap-1 pb-0.5">
-                                    <div className="flex gap-3">
-                                        <span className="h-2 w-3.5 rounded-t-full border-t-[2.5px] border-x-[2.5px] border-[#052e16]" />
-                                        <span className="h-2 w-3.5 rounded-t-full border-t-[2.5px] border-x-[2.5px] border-[#052e16]" />
-                                    </div>
-
-                                    <div className="relative flex h-4 w-6 items-end justify-center overflow-hidden rounded-b-full border-2 border-[#052e16] bg-[#052e16]">
-                                        <span className="absolute -bottom-0.5 h-2 w-4 rounded-t-full bg-[#f472b6]" />
-                                    </div>
+                                {/* Open Happy Mouth */}
+                                <div className="w-4 h-2.5 bg-[#022c22] rounded-b-full overflow-hidden relative flex justify-center">
+                                    <div className="absolute bottom-0 w-2.5 h-1.5 bg-[#c084fc] rounded-t-full" />
                                 </div>
                             </div>
 
-                            <div className="absolute -bottom-2 -right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#052e16] bg-[#bdf354] shadow-sm">
-                                <svg
-                                    className="h-5 w-5 text-[#052e16]"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={3.5}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <polyline points="20 6 9 17 4 12" />
-                                </svg>
+                            {/* Green Checkmark Circle (Bottom Right) */}
+                            <div className="absolute -bottom-2 -right-2 z-20 bg-[#bef264] p-1 rounded-full shadow-md border-2 border-[#faf9f5]">
+                                <Check className="w-4 h-4 text-[#022c22] stroke-[3.5]" />
                             </div>
+
                         </div>
                     </div>
 
@@ -111,7 +122,7 @@ export default function RewardSuccessPage() {
 
                     {/* Student ID */}
                     <p className="mt-3 rounded-full border border-[#a2cfb7] bg-[#e8f3e5] px-4 py-1.5 text-xs font-bold text-[#082e21]">
-                        Student ID: ADM-2024-8891
+                        Student ID: AJC24EC032
                     </p>
                 </section>
 
@@ -171,7 +182,7 @@ export default function RewardSuccessPage() {
 
                             <h2
                                 id="reward-title"
-                                className="mt-2 text-lg font-black tracking-tight text-[#082e21] sm:text-xl"
+                                className="mt-2 text-lg font-black tracking-tight text-[#082e21] sm:text-md"
                             >
                                 Campus voucher
                             </h2>

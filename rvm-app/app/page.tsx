@@ -241,7 +241,7 @@ export default function CashcrowRewardPage() {
             <div className="relative z-10 -rotate-6 transform">
               {/* Ticket Body with True Mask Cutouts */}
               <div
-                className="relative w-80 h-40 bg-gradient-to-br from-[#10b981] via-[#059669] to-[#047857] rounded-2xl p-4 flex items-center justify-between"
+                className="relative w-60 h-38 bg-gradient-to-br from-[#10b981] via-[#059669] to-[#047857] rounded-2xl p-4 flex items-center justify-between"
                 style={{
                   maskImage:
                     'radial-gradient(circle 14px at 0% 50%, transparent 99%, black 100%), radial-gradient(circle 14px at 100% 50%, transparent 99%, black 100%)',
@@ -255,9 +255,9 @@ export default function CashcrowRewardPage() {
                 <div className="absolute right-12 top-2 bottom-2 border-r-2 border-dashed border-[#065f46]/40" />
 
                 {/* Recycle Symbol (Left Side of Ticket) */}
-                <div className="flex-1 flex justify-center items-center pl-2">
+                <div className="flex-1 flex justify-center items-center">
                   <div className="p-3 bg-[#a3e635] rounded-full shadow-inner">
-                    <RefreshCw className="w-12 h-12 text-[#047857] stroke-[2.5]" />
+                    <RefreshCw className="w-8 h-8 text-[#047857] stroke-[2.5]" />
                   </div>
                 </div>
 
