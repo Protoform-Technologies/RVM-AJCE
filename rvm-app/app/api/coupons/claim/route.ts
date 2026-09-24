@@ -1,0 +1,177 @@
+import { NextResponse } from "next/server";
+
+import type { Coupon } from "@/lib/coupon";
+
+const DEFAULT_API_BASE_URL = "https://api.cashcrow.co.in/api/v1/rvm";
+const DEFAULT_CLAIM_ORIGIN = "https://claim.cashcrow.co.in";
+
+type CashcrowResponse = {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  coupon?: Coupon;
+};
+
+const errorMessages: Record<string, string> = {
+  VALIDATION_ERROR: "Enter a valid voucher code.",
+  COUPON_NOT_FOUND: "We could not find that voucher.",
+  COUPON_ALREADY_CLAIMED: "This voucher has already been claimed.",
+  COUPON_NOT_CLAIMABLE: "This voucher has expired, was voided, or cannot be claimed.",
+  RATE_LIMITED: "Too many attempts. Please wait a moment and try again.",
+  UNAUTHORIZED: "Cashcrow rejected the configured claim credentials.",
+  FORBIDDEN_ORIGIN: "Cashcrow rejected the configured claim website origin.",
+  INTERNAL_ERROR: "Cashcrow could not process the voucher right now.",
+};
+
+async function readJson(response: Response): Promise<CashcrowResponse> {
+  try {
+    return (await response.json()) as CashcrowResponse;
+  } catch {
+    return {};
+  }
+}
+
+function upstreamError(
+  response: Response,
+  body: CashcrowResponse,
+  fallback: string,
+) {
+  const error = body.error ?? "UPSTREAM_ERROR";
+  const status = response.status >= 400 && response.status < 600
+    ? response.status
+    : 502;
+  const headers = new Headers({ "Cache-Control": "no-store" });
+  const retryAfter = response.headers.get("Retry-After");
+
+  if (retryAfter) {
+    headers.set("Retry-After", retryAfter);
+  }
+
+  return NextResponse.json(
+    {
+      success: false,
+      error,
+      message: errorMessages[error] ?? fallback,
+    },
+    { status, headers },
+  );
+}
+
+export async function POST(request: Request) {
+  let payload: unknown;
+
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "VALIDATION_ERROR", message: errorMessages.VALIDATION_ERROR },
+      { status: 400 },
+    );
+  }
+
+  const couponCode =
+    typeof payload === "object" && payload !== null && "couponCode" in payload
+      ? String(payload.couponCode).trim().toUpperCase()
+      : "";
+
+  if (couponCode.length < 6 || couponCode.length > 96) {
+    return NextResponse.json(
+      { success: false, error: "VALIDATION_ERROR", message: errorMessages.VALIDATION_ERROR },
+      { status: 400 },
+    );
+  }
+
+  const username = process.env.CASHCROW_CLAIM_USERNAME;
+  const password = process.env.CASHCROW_CLAIM_PASSWORD;
+
+  if (!username || !password) {
+    console.error("Cashcrow claim credentials are not configured.");
+    return NextResponse.json(
+      {
+        success: false,
+        error: "CONFIGURATION_ERROR",
+        message: "Voucher claiming is not configured yet. Please contact support.",
+      },
+      { status: 503 },
+    );
+  }
+
+  const apiBaseUrl = (
+    process.env.CASHCROW_RVM_API_BASE_URL ?? DEFAULT_API_BASE_URL
+  ).replace(/\/$/, "");
+  const claimOrigin = (
+    process.env.CASHCROW_CLAIM_ORIGIN ?? DEFAULT_CLAIM_ORIGIN
+  ).replace(/\/$/, "");
+  const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+  const sharedHeaders = {
+    Authorization: authorization,
+    Origin: claimOrigin,
+    Referer: `${claimOrigin}/`,
+  };
+
+  try {
+    const lookupResponse = await fetch(
+      `${apiBaseUrl}/admin/coupons/${encodeURIComponent(couponCode)}`,
+      { headers: sharedHeaders, cache: "no-store" },
+    );
+    const lookupBody = await readJson(lookupResponse);
+
+    if (!lookupResponse.ok || !lookupBody.coupon) {
+      return upstreamError(
+        lookupResponse,
+        lookupBody,
+        "The voucher could not be checked right now.",
+      );
+    }
+
+    if (lookupBody.coupon.status !== "ISSUED") {
+      const error = lookupBody.coupon.status === "CLAIMED"
+        ? "COUPON_ALREADY_CLAIMED"
+        : "COUPON_NOT_CLAIMABLE";
+
+      return NextResponse.json(
+        { success: false, error, message: errorMessages[error] },
+        { status: 409 },
+      );
+    }
+
+    const claimCode = lookupBody.coupon.voucherQr || lookupBody.coupon.couponCode;
+    const claimResponse = await fetch(`${apiBaseUrl}/admin/coupons/claim`, {
+      method: "POST",
+      headers: {
+        ...sharedHeaders,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ couponCode: claimCode }),
+      cache: "no-store",
+    });
+    const claimBody = await readJson(claimResponse);
+
+    if (!claimResponse.ok || !claimBody.coupon) {
+      return upstreamError(
+        claimResponse,
+        claimBody,
+        "The voucher could not be claimed right now.",
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: claimBody.message ?? "Coupon claimed",
+        coupon: { ...lookupBody.coupon, ...claimBody.coupon },
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    console.error("Cashcrow voucher claim failed.", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "UPSTREAM_UNAVAILABLE",
+        message: "Cashcrow is temporarily unavailable. Please try again.",
+      },
+      { status: 502 },
+    );
+  }
+}

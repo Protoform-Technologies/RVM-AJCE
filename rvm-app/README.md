@@ -1,4 +1,25 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cashcrow RVM voucher claim frontend
+
+This Next.js app opens a printed RVM voucher deep link, verifies that the voucher
+is `ISSUED`, collects the student admission number, claims the voucher, and
+displays the confirmed reward amount. If the page is opened without a valid
+`couponcode` query parameter, it shows a camera QR scanner instead.
+
+## Configuration
+
+Copy `.env.example` to `.env.local` and add the dedicated claim credentials:
+
+```dotenv
+CASHCROW_CLAIM_USERNAME=your_claim_username
+CASHCROW_CLAIM_PASSWORD=your_claim_password
+CASHCROW_RVM_API_BASE_URL=https://api.cashcrow.co.in/api/v1/rvm
+CASHCROW_CLAIM_ORIGIN=https://claim.cashcrow.co.in
+```
+
+There is no user login gate. The browser calls same-origin Next.js route
+handlers, and those server-only handlers attach HTTP Basic Auth when forwarding
+requests to Cashcrow. The username and password are never compiled into or sent
+to the browser.
 
 ## Getting Started
 
@@ -6,6 +27,8 @@ First, run the development server:
 
 ```bash
 npm run dev
+# HTTPS development (required for camera testing outside localhost)
+npm run dev:https
 # or
 yarn dev
 # or
@@ -14,11 +37,21 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open a deep link such as
+`http://localhost:3000/?couponcode=DRSV.EXAMPLE` to test the parameter flow.
+Opening [http://localhost:3000](http://localhost:3000) without the parameter
+shows the scanner and manual-code fallback. Camera access requires a secure
+browser context: use `https://` in production, `http://localhost` on the same
+computer, or `npm run dev:https` for local HTTPS. When testing from a phone over
+the LAN, the phone must trust the development certificate; otherwise use a
+trusted HTTPS deployment or development tunnel.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The browser calls `/api/coupons/lookup` and `/api/coupons/claim`. These handlers
+forward to `https://api.cashcrow.co.in/api/v1/rvm/admin/coupons/...` with the
+server-only credentials and configured claim origin.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The documented backend does not currently accept or persist the admission
+number; it is retained only for the current browser confirmation.
 
 ## Learn More
 

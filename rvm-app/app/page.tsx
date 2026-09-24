@@ -1,71 +1,354 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ArrowRight, Leaf, RefreshCw, Sparkles } from 'lucide-react';
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { ArrowRight, GraduationCap, Leaf, LoaderCircle, RefreshCw, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
-// Academic cap icon
-const GraduationCapIcon = ({
-  className = 'h-5 w-5',
-}: {
-  className?: string;
-}) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden="true"
-    className={className}
-  >
-    <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" />
-  </svg>
-);
+import { QrScanner } from '@/app/components/qr-scanner';
+import {
+  CLAIMED_COUPON_STORAGE_KEY,
+  type ClaimCouponResponse,
+  type Coupon,
+} from '@/lib/coupon';
+import { couponCodeFromPageUrl } from '@/lib/voucher-code';
+import {
+  cacheVoucherOutcome,
+  getCachedVoucherOutcome,
+  type VoucherOutcomeKind,
+} from '@/lib/voucher-outcome-cache';
 
-// Recycling icon
-const RecycleIcon = ({ className = 'h-6 w-6' }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    className={className}
-  >
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.91 1.81 1.81 0 0 1-.05-1.81l.1-.17c.23-.42.5-.82.8-1.2l2.36-2.91" />
-    <path d="M11 19h8.2a1.8 1.8 0 0 0 1.58-.9 1.83 1.83 0 0 0 .04-1.82l-.1-.18a12.63 12.63 0 0 0-.82-1.21l-2.35-2.89" />
-    <path d="M20 9V6.8a1.8 1.8 0 0 0-.9-1.58 1.83 1.83 0 0 0-1.82-.04l-.18.1a12.63 12.63 0 0 0-1.21.82l-2.89 2.35" />
-    <path d="M16 19l2 3 2-3" />
-    <path d="M4 11l-3 2 3 2" />
-    <path d="M11 4L9 1l2-1" />
-  </svg>
-);
+const subscribeToPageUrl = () => () => {};
+const getPageUrl = () => window.location.href;
+const getServerPageUrl = () => undefined;
+
+type LookupState =
+  | { status: 'loading' }
+  | { status: 'ready'; coupon: Coupon }
+  | { status: 'error'; message: string };
+
+type LookupApiResult =
+  | { success: true; coupon: Coupon }
+  | { success: false; error?: string; message?: string };
+
+type LookupRequestResult = {
+  ok: boolean;
+  status: number;
+  retryAfter: string | null;
+  result: LookupApiResult;
+};
+
+const pendingLookups = new Map<string, Promise<LookupRequestResult>>();
+
+function rateLimitMessage(retryAfter: string | null) {
+  if (!retryAfter) {
+    return 'Too many attempts. Please wait a moment before trying again.';
+  }
+
+  const seconds = Number(retryAfter);
+
+  return Number.isFinite(seconds)
+    ? `Too many attempts. Try again in ${seconds} seconds.`
+    : `Too many attempts. Try again after ${retryAfter}.`;
+}
+
+function requestVoucherLookup(voucherCode: string) {
+  const existingRequest = pendingLookups.get(voucherCode);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = fetch(
+    `/api/coupons/lookup?code=${encodeURIComponent(voucherCode)}`,
+  ).then(async (response): Promise<LookupRequestResult> => ({
+    ok: response.ok,
+    status: response.status,
+    retryAfter: response.headers.get('Retry-After'),
+    result: await response.json() as LookupApiResult,
+  }));
+
+  pendingLookups.set(voucherCode, request);
+  void request.then(
+    () => pendingLookups.delete(voucherCode),
+    () => pendingLookups.delete(voucherCode),
+  );
+  return request;
+}
+
+function cacheApiError(
+  couponCode: string,
+  result: Extract<LookupApiResult, { success: false }>,
+) {
+  const outcomeByError: Record<string, VoucherOutcomeKind> = {
+    COUPON_ALREADY_CLAIMED: 'CLAIMED',
+    COUPON_NOT_FOUND: 'NOT_FOUND',
+    COUPON_NOT_CLAIMABLE: 'NOT_CLAIMABLE',
+  };
+  const outcome = result.error ? outcomeByError[result.error] : undefined;
+
+  if (outcome) {
+    cacheVoucherOutcome(
+      couponCode,
+      outcome,
+      result.message ?? 'This voucher cannot be claimed.',
+    );
+  }
+}
+
+function cacheCouponAliases(
+  scannedCode: string,
+  coupon: Coupon,
+  kind: VoucherOutcomeKind,
+  message: string,
+) {
+  const identifiers = new Set([
+    scannedCode,
+    coupon.couponCode,
+    coupon.voucherQr,
+    coupon.transactionId,
+  ]);
+
+  for (const identifier of identifiers) {
+    if (identifier) {
+      cacheVoucherOutcome(identifier.toUpperCase(), kind, message);
+    }
+  }
+}
 
 export default function CashcrowRewardPage() {
   const router = useRouter();
 
+  const pageUrl = useSyncExternalStore(
+    subscribeToPageUrl,
+    getPageUrl,
+    getServerPageUrl,
+  );
+  const couponCode = useMemo(() => couponCodeFromPageUrl(pageUrl), [pageUrl]);
+  const cachedOutcome = useMemo(
+    () => couponCode ? getCachedVoucherOutcome(couponCode) : null,
+    [couponCode],
+  );
+  const [lookup, setLookup] = useState<LookupState>({ status: 'loading' });
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!couponCode || cachedOutcome) {
+      return;
+    }
+
+    const voucherCode = couponCode;
+    let cancelled = false;
+
+    async function lookupVoucher() {
+      try {
+        const response = await requestVoucherLookup(voucherCode);
+
+        if (cancelled) {
+          return;
+        }
+
+        const { result } = response;
+
+        if (response.status === 401) {
+          setLookup({
+            status: 'error',
+            message: 'The configured Cashcrow claim credentials were rejected.',
+          });
+          return;
+        }
+
+        if (response.status === 429) {
+          setLookup({
+            status: 'error',
+            message: rateLimitMessage(response.retryAfter),
+          });
+          return;
+        }
+
+        if (!result.success) {
+          cacheApiError(voucherCode, result);
+          setLookup({
+            status: 'error',
+            message: result.message ?? 'This voucher could not be verified.',
+          });
+          return;
+        }
+
+        if (!response.ok) {
+          setLookup({
+            status: 'error',
+            message: 'This voucher could not be verified.',
+          });
+          return;
+        }
+
+        if (result.coupon.status === 'CLAIMED') {
+          cacheCouponAliases(
+            voucherCode,
+            result.coupon,
+            'CLAIMED',
+            'This voucher has already been claimed. Scan another voucher.',
+          );
+          setLookup({
+            status: 'error',
+            message: 'This voucher has already been claimed. Scan another voucher.',
+          });
+          return;
+        }
+
+        if (result.coupon.status === 'EXPIRED') {
+          cacheCouponAliases(
+            voucherCode,
+            result.coupon,
+            'EXPIRED',
+            'This voucher has expired. Scan another voucher.',
+          );
+          setLookup({
+            status: 'error',
+            message: 'This voucher has expired. Scan another voucher.',
+          });
+          return;
+        }
+
+        if (result.coupon.status === 'VOID') {
+          cacheCouponAliases(
+            voucherCode,
+            result.coupon,
+            'VOID',
+            'This voucher has been voided and cannot be claimed. Scan another voucher.',
+          );
+          setLookup({
+            status: 'error',
+            message: 'This voucher has been voided and cannot be claimed. Scan another voucher.',
+          });
+          return;
+        }
+
+        setLookup({ status: 'ready', coupon: result.coupon });
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        setLookup({
+          status: 'error',
+          message: 'Unable to reach Cashcrow. Check your connection and scan again.',
+        });
+      }
+    }
+
+    void lookupVoucher();
+    return () => {
+      cancelled = true;
+    };
+  }, [couponCode, cachedOutcome]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const admission = admissionNumber.trim().toUpperCase();
 
-    // Format: AJC23CS054
-    // AJC + 2 digits + 2 letters + 3 digits
-    const admissionRegex = /^AJC\d{2}[A-Z]{2}\d{3}$/;
-
-    if (!admissionRegex.test(admission)) {
+    if (!/^AJC\d{2}[A-Z]{2}\d{3}$/.test(admission)) {
       setError('Invalid admission number. Example: AJC23CS054');
       return;
     }
 
     setError('');
+    setIsSubmitting(true);
 
-    router.push('/reward-success');
+    try {
+      const response = await fetch('/api/coupons/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ couponCode }),
+      });
+      const result = await response.json() as
+        | ClaimCouponResponse
+        | { success: false; error?: string; message?: string };
+
+      if (response.status === 401) {
+        setError('The configured Cashcrow claim credentials were rejected.');
+        return;
+      }
+
+      if (response.status === 429) {
+        setError(rateLimitMessage(response.headers.get('Retry-After')));
+        return;
+      }
+
+      if (!result.success) {
+        if (couponCode) {
+          cacheApiError(couponCode, result);
+        }
+        setError(result.message ?? 'The voucher could not be claimed. Please try again.');
+        return;
+      }
+
+      if (!response.ok) {
+        setError('The voucher could not be claimed. Please try again.');
+        return;
+      }
+
+      if (couponCode) {
+        cacheCouponAliases(
+          couponCode,
+          result.coupon,
+          'CLAIMED',
+          'This voucher has already been claimed. Scan another voucher.',
+        );
+      }
+
+      sessionStorage.setItem(
+        CLAIMED_COUPON_STORAGE_KEY,
+        JSON.stringify({ ...result.coupon, admissionNumber: admission }),
+      );
+      router.push('/reward-success');
+    } catch {
+      setError('Unable to reach Cashcrow. Check your connection and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (pageUrl === undefined) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-[#f8fbf6] text-[#007a52]">
+        <LoaderCircle className="h-8 w-8 animate-spin" aria-label="Loading voucher" />
+      </main>
+    );
+  }
+
+  if (!couponCode) {
+    return <QrScanner />;
+  }
+
+  if (cachedOutcome) {
+    return <QrScanner message={cachedOutcome.message} />;
+  }
+
+  if (lookup.status === 'loading') {
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#f8fbf6] px-6 text-center text-[#0f2e24]">
+        <Image
+          src="/assets/Cashcrow_logo1.png"
+          alt="Cashcrow"
+          width={152}
+          height={72}
+          priority
+          className="h-auto w-38"
+        />
+        <LoaderCircle className="h-8 w-8 animate-spin text-[#007a52]" aria-hidden="true" />
+        <p className="font-bold">Checking your voucher…</p>
+      </main>
+    );
+  }
+
+  if (lookup.status === 'error') {
+    return <QrScanner message={lookup.message} />;
+  }
 
   return (
     <main className="relative flex min-h-dvh flex-col overflow-hidden bg-[#f3f7f0] px-4 py-6 font-sans text-[#0f2e24] sm:px-6">
@@ -301,7 +584,7 @@ export default function CashcrowRewardPage() {
           </h2>
 
           <p className="mb-5 mt-1 text-sm font-medium leading-relaxed text-[#527063]">
-            Enter your admission number to claim your coupon.
+            Voucher <span className="font-bold text-[#0f2e24]">{lookup.coupon.couponCode}</span> is ready. Enter your admission number to continue.
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -316,12 +599,12 @@ export default function CashcrowRewardPage() {
               {/* Input + Error */}
               <div className="flex flex-col">
                 <div className="relative flex items-center">
-                  {/* Graduation icon */}
+                  {/* Admission icon */}
                   <div
                     aria-hidden="true"
                     className="pointer-events-none absolute left-3.5 text-[#0f2e24]"
                   >
-                    <GraduationCapIcon className="h-5 w-5" />
+                    <GraduationCap className="h-5 w-5" />
                   </div>
 
                   {/* Divider */}
@@ -357,6 +640,9 @@ export default function CashcrowRewardPage() {
                       : 'border-gray-200 focus:border-[#0b4d36] focus:ring-[#0b4d36]'
                       } focus:ring-1`}
                     required
+                    minLength={10}
+                    maxLength={10}
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -364,6 +650,7 @@ export default function CashcrowRewardPage() {
                 {error && (
                   <p
                     id="admission-error"
+                    role="alert"
                     className="mt-1.5 text-sm font-semibold text-red-600"
                   >
                     {error}
@@ -374,15 +661,20 @@ export default function CashcrowRewardPage() {
 
             <button
               type="submit"
-              className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#003f2b] bg-[#007a52] px-4 py-3.5 text-lg font-black text-white shadow-[0_4px_0_0_#063324] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:translate-y-1 active:shadow-none"
+              disabled={isSubmitting}
+              className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#003f2b] bg-[#007a52] px-4 py-3.5 text-lg font-black text-white shadow-[0_4px_0_0_#063324] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-70 disabled:shadow-none"
             >
-              <span>Claim my reward</span>
+              <span>{isSubmitting ? 'Claiming reward…' : 'Claim my reward'}</span>
 
-              <ArrowRight
-                aria-hidden="true"
-                className="h-5 w-5"
-                strokeWidth={3}
-              />
+              {isSubmitting ? (
+                <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin" />
+              ) : (
+                <ArrowRight
+                  aria-hidden="true"
+                  className="h-5 w-5"
+                  strokeWidth={3}
+                />
+              )}
             </button>
           </form>
         </section>

@@ -14,7 +14,7 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: "Cashcrow",
-  description: "Cashcrow rewards",
+  description: "Look up and claim Cashcrow RVM vouchers",
 };
 
 export default function RootLayout({

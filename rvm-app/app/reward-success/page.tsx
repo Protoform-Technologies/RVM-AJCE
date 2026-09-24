@@ -1,18 +1,93 @@
 "use client";
 
+import { useMemo, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
     Check,
-    ExternalLink,
-    Link as LinkIcon,
-    MessageSquare,
+    ReceiptIndianRupee,
+    LoaderCircle,
     Pencil,
     Ticket,
 } from "lucide-react";
 
+import {
+    CLAIMED_COUPON_STORAGE_KEY,
+    type ClaimedCoupon,
+} from "@/lib/coupon";
+
+const subscribeToSessionStorage = () => () => {};
+const getStoredCoupon = () =>
+    sessionStorage.getItem(CLAIMED_COUPON_STORAGE_KEY);
+const getServerStoredCoupon = () => undefined;
+
+function parseClaimedCoupon(storedCoupon: string | null | undefined) {
+    if (!storedCoupon) {
+        return null;
+    }
+
+    try {
+        const parsedCoupon = JSON.parse(storedCoupon) as ClaimedCoupon;
+
+        if (
+            parsedCoupon.status !== "CLAIMED" ||
+            typeof parsedCoupon.couponCode !== "string" ||
+            typeof parsedCoupon.amount !== "number" ||
+            typeof parsedCoupon.admissionNumber !== "string"
+        ) {
+            return null;
+        }
+
+        return parsedCoupon;
+    } catch {
+        return null;
+    }
+}
+
 export default function RewardSuccessPage() {
     const router = useRouter();
+    const storedCoupon = useSyncExternalStore(
+        subscribeToSessionStorage,
+        getStoredCoupon,
+        getServerStoredCoupon,
+    );
+    const coupon = useMemo(
+        () => parseClaimedCoupon(storedCoupon),
+        [storedCoupon],
+    );
+
+    if (storedCoupon === undefined) {
+        return (
+            <main className="flex min-h-dvh items-center justify-center bg-[#f7f9f3] text-[#007a52]">
+                <LoaderCircle className="h-8 w-8 animate-spin" aria-label="Loading claimed voucher" />
+            </main>
+        );
+    }
+
+    if (!coupon) {
+        return (
+            <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#f7f9f3] px-6 text-center text-[#082e21]">
+                <Ticket className="h-10 w-10 text-[#007a52]" aria-hidden="true" />
+                <h1 className="text-2xl font-black">No claimed voucher to show</h1>
+                <button
+                    type="button"
+                    onClick={() => router.replace("/")}
+                    className="rounded-xl bg-[#007a52] px-5 py-3 font-bold text-white"
+                >
+                    Enter a voucher
+                </button>
+            </main>
+        );
+    }
+
+    const claimedAt = coupon.claimedAt ? new Date(coupon.claimedAt) : null;
+    const formattedClaimedAt = claimedAt && !Number.isNaN(claimedAt.getTime())
+        ? new Intl.DateTimeFormat("en-IN", {
+            dateStyle: "medium",
+            timeStyle: "short",
+            timeZone: "UTC",
+        }).format(claimedAt)
+        : "Just now";
 
     return (
         <div className="min-h-dvh bg-[#f7f9f3] px-4 py-5 font-sans text-[#082e21] antialiased sm:px-6 sm:py-8">
@@ -122,7 +197,7 @@ export default function RewardSuccessPage() {
 
                     {/* Student ID */}
                     <p className="mt-3 rounded-full border border-[#a2cfb7] bg-[#e8f3e5] px-4 py-1.5 text-xs font-bold text-[#082e21]">
-                        Student ID: AJC24EC032
+                        Student ID: {coupon.admissionNumber}
                     </p>
                 </section>
 
@@ -147,7 +222,7 @@ export default function RewardSuccessPage() {
                                 />
 
                                 <span className="truncate text-[10px] font-extrabold uppercase tracking-[0.14em] sm:text-xs">
-                                    Your campus reward
+                                    Cashcrow RVM voucher
                                 </span>
                             </div>
 
@@ -177,14 +252,14 @@ export default function RewardSuccessPage() {
                     <div className="relative px-5 pb-5 pt-6 sm:px-6">
                         <div className="text-center">
                             <p className="font-manrope text-[clamp(3.5rem,17vw,4.5rem)] font-black leading-[0.9] tracking-[-0.05em] text-[#082e21]">
-                                ₹20
+                                ₹{coupon.amount.toLocaleString("en-IN")}
                             </p>
 
                             <h2
                                 id="reward-title"
                                 className="mt-2 text-lg font-black tracking-tight text-[#082e21] sm:text-md"
                             >
-                                Campus voucher
+                                Discount confirmed
                             </h2>
                         </div>
 
@@ -192,7 +267,7 @@ export default function RewardSuccessPage() {
                         <div className="mt-6 rounded-2xl border border-[#ded5f8] bg-[#f2eefc] p-2">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#e3d7fa] text-[#5c37ad]">
-                                    <LinkIcon
+                                    <ReceiptIndianRupee
                                         className="h-4 w-4"
                                         aria-hidden="true"
                                     />
@@ -200,11 +275,8 @@ export default function RewardSuccessPage() {
 
                                 <div className="min-w-0">
                                     <p className="text-xs font-medium leading-relaxed text-[#555c57]">
-                                        Visit{" "}
-                                        <span className="px-0.5 text-sm font-extrabold text-[#082e21]">
-                                            AES
-                                        </span>{" "}
-                                        to collect your reward.
+                                        Apply this amount as the discount for the
+                                        customer&apos;s current purchase.
                                     </p>
                                 </div>
                             </div>
@@ -229,7 +301,7 @@ export default function RewardSuccessPage() {
                             </p>
 
                             <p className="mt-0.5 font-mono text-[11px] font-bold tracking-wide text-[#39443e]">
-                                CC-20-AES-8891
+                                {coupon.couponCode}
                             </p>
                         </div>
 
@@ -239,50 +311,26 @@ export default function RewardSuccessPage() {
                             </p>
 
                             <time
-                                dateTime="2026-09-21T18:50:00Z"
+                                dateTime={coupon.claimedAt ?? undefined}
                                 className="mt-0.5 block text-[11px] font-bold text-[#4f5953]"
                             >
-                                21 Sep 2026 · 18:50 UTC
+                                {formattedClaimedAt} UTC
                             </time>
                         </div>
                     </footer>
                 </article>
 
-                {/* Feedback */}
-                <section
-                    aria-labelledby="feedback-heading"
-                    className="mt-6 w-full text-center"
-                >
-                    <a
-                        href="https://forms.google.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Share feedback (opens Google Forms in a new tab)"
-                        className="mt-2.5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#003f2b] bg-[#007a52] px-4 py-3.5 text-sm font-extrabold text-white shadow-[0_4px_0_0_#063324] transition-all hover:bg-[#006644] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:translate-y-1 active:shadow-none sm:text-base"
-                    >
-                        <MessageSquare
-                            className="h-5 w-5"
-                            aria-hidden="true"
-                        />
-
-                        <span>Share feedback</span>
-
-                        <ExternalLink
-                            className="ml-0.5 h-4 w-4"
-                            strokeWidth={2.5}
-                            aria-hidden="true"
-                        />
-                    </a>
-                </section>
-
                 {/* Secondary Navigation */}
                 <nav
                     aria-label="Secondary actions"
-                    className="mb-2 mt-5 flex w-full justify-center"
+                    className="mb-2 mt-6 flex w-full justify-center"
                 >
                     <button
                         type="button"
-                        onClick={() => router.push("/")}
+                        onClick={() => {
+                            sessionStorage.removeItem(CLAIMED_COUPON_STORAGE_KEY);
+                            router.push("/");
+                        }}
                         className="group inline-flex min-h-10 items-center gap-2 rounded-full border border-[#007a52]/20 bg-[#007a52]/5 px-4 py-2 text-xs font-bold text-[#007a52] shadow-sm transition-all duration-200 hover:border-[#007a52]/40 hover:bg-[#007a52]/10 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:scale-[0.98]"
                     >
                         <Pencil
@@ -290,7 +338,7 @@ export default function RewardSuccessPage() {
                             aria-hidden="true"
                         />
 
-                        <span>Edit admission number</span>
+                        <span>Claim another voucher</span>
                     </button>
                 </nav>
             </main>
