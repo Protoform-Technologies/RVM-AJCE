@@ -4,6 +4,7 @@ import type { Coupon } from "@/lib/coupon";
 
 const DEFAULT_API_BASE_URL = "https://api.cashcrow.co.in/api/v1/rvm";
 const DEFAULT_CLAIM_ORIGIN = "https://claim.cashcrow.co.in";
+const DEFAULT_AES_STOCK_API_URL = "https://stock.aesajce.in/offers/cashcrow";
 
 type CashcrowResponse = {
   success?: boolean;
@@ -20,6 +21,9 @@ const errorMessages: Record<string, string> = {
   RATE_LIMITED: "Too many attempts. Please wait a moment and try again.",
   UNAUTHORIZED: "Cashcrow rejected the configured claim credentials.",
   FORBIDDEN_ORIGIN: "Cashcrow rejected the configured claim website origin.",
+  INVALID_COUPON_AMOUNT: "This voucher does not have a valid discount amount.",
+  OFFER_FAILED: "The student offer could not be created. The voucher was not claimed.",
+  CLAIM_FAILED_AFTER_OFFER: "The student offer was created, but the voucher could not be marked claimed. Do not retry; contact support.",
   INTERNAL_ERROR: "Cashcrow could not process the voucher right now.",
 };
 
@@ -73,8 +77,16 @@ export async function POST(request: Request) {
     typeof payload === "object" && payload !== null && "couponCode" in payload
       ? String(payload.couponCode).trim().toUpperCase()
       : "";
+  const admissionNumber =
+    typeof payload === "object" && payload !== null && "admissionNumber" in payload
+      ? String(payload.admissionNumber).trim().toUpperCase()
+      : "";
 
-  if (couponCode.length < 6 || couponCode.length > 96) {
+  if (
+    couponCode.length < 6 ||
+    couponCode.length > 96 ||
+    !/^AJC\d{2}[A-Z]{2}\d{3}$/.test(admissionNumber)
+  ) {
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: errorMessages.VALIDATION_ERROR },
       { status: 400 },
@@ -83,9 +95,10 @@ export async function POST(request: Request) {
 
   const username = process.env.CASHCROW_CLAIM_USERNAME;
   const password = process.env.CASHCROW_CLAIM_PASSWORD;
+  const aesStockApiKey = process.env.AES_STOCK_API_KEY;
 
-  if (!username || !password) {
-    console.error("Cashcrow claim credentials are not configured.");
+  if (!username || !password || !aesStockApiKey) {
+    console.error("Cashcrow or AES stock credentials are not configured.");
     return NextResponse.json(
       {
         success: false,
@@ -102,6 +115,8 @@ export async function POST(request: Request) {
   const claimOrigin = (
     process.env.CASHCROW_CLAIM_ORIGIN ?? DEFAULT_CLAIM_ORIGIN
   ).replace(/\/$/, "");
+  const aesStockApiUrl = process.env.AES_STOCK_API_URL
+    ?? DEFAULT_AES_STOCK_API_URL;
   const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
   const sharedHeaders = {
     Authorization: authorization,
@@ -135,6 +150,45 @@ export async function POST(request: Request) {
       );
     }
 
+    const offerAmount = lookupBody.coupon.amount;
+
+    if (!Number.isFinite(offerAmount) || offerAmount <= 0) {
+      console.error("Cashcrow returned an invalid coupon amount.");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "INVALID_COUPON_AMOUNT",
+          message: errorMessages.INVALID_COUPON_AMOUNT,
+        },
+        { status: 502, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const offerResponse = await fetch(aesStockApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        apikey: aesStockApiKey,
+        buyer_id: admissionNumber,
+        amount: offerAmount,
+      }),
+      cache: "no-store",
+    });
+
+    if (!offerResponse.ok) {
+      console.error(
+        `AES Cashcrow offer creation failed with status ${offerResponse.status}.`,
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: "OFFER_FAILED",
+          message: errorMessages.OFFER_FAILED,
+        },
+        { status: 502, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
     const claimCode = lookupBody.coupon.voucherQr || lookupBody.coupon.couponCode;
     const claimResponse = await fetch(`${apiBaseUrl}/admin/coupons/claim`, {
       method: "POST",
@@ -148,10 +202,16 @@ export async function POST(request: Request) {
     const claimBody = await readJson(claimResponse);
 
     if (!claimResponse.ok || !claimBody.coupon) {
-      return upstreamError(
-        claimResponse,
-        claimBody,
-        "The voucher could not be claimed right now.",
+      console.error(
+        `Cashcrow claim failed with status ${claimResponse.status} after the AES offer was created.`,
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: "CLAIM_FAILED_AFTER_OFFER",
+          message: errorMessages.CLAIM_FAILED_AFTER_OFFER,
+        },
+        { status: 502, headers: { "Cache-Control": "no-store" } },
       );
     }
 

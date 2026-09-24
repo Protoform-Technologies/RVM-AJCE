@@ -84,6 +84,7 @@ function cacheApiError(
     COUPON_ALREADY_CLAIMED: 'CLAIMED',
     COUPON_NOT_FOUND: 'NOT_FOUND',
     COUPON_NOT_CLAIMABLE: 'NOT_CLAIMABLE',
+    CLAIM_FAILED_AFTER_OFFER: 'NOT_CLAIMABLE',
   };
   const outcome = result.error ? outcomeByError[result.error] : undefined;
 
@@ -263,7 +264,10 @@ export default function CashcrowRewardPage() {
       const response = await fetch('/api/coupons/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ couponCode }),
+        body: JSON.stringify({
+          couponCode,
+          admissionNumber: admission,
+        }),
       });
       const result = await response.json() as
         | ClaimCouponResponse
