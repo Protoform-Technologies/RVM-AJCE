@@ -13,6 +13,10 @@ type CashcrowResponse = {
   coupon?: Coupon;
 };
 
+type AesOfferResponse = {
+  success?: boolean;
+};
+
 const errorMessages: Record<string, string> = {
   VALIDATION_ERROR: "Enter a valid voucher code.",
   COUPON_NOT_FOUND: "We could not find that voucher.",
@@ -164,6 +168,9 @@ export async function POST(request: Request) {
       );
     }
 
+    const offerStartedAt = Date.now();
+    console.info("[voucher-claim] Calling AJCE offer endpoint.");
+
     const offerResponse = await fetch(aesStockApiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -174,8 +181,18 @@ export async function POST(request: Request) {
       }),
       cache: "no-store",
     });
+    console.info(
+      `[voucher-claim] AJCE offer endpoint responded with status ${offerResponse.status} in ${Date.now() - offerStartedAt}ms.`,
+    );
+    let offerBody: AesOfferResponse = {};
 
-    if (!offerResponse.ok) {
+    try {
+      offerBody = (await offerResponse.json()) as AesOfferResponse;
+    } catch {
+      // Some successful AJCE responses may not include a JSON body.
+    }
+
+    if (!offerResponse.ok || offerBody.success === false) {
       console.error(
         `AES Cashcrow offer creation failed with status ${offerResponse.status}.`,
       );
@@ -190,6 +207,9 @@ export async function POST(request: Request) {
     }
 
     const claimCode = lookupBody.coupon.voucherQr || lookupBody.coupon.couponCode;
+    const claimStartedAt = Date.now();
+    console.info("[voucher-claim] AJCE offer succeeded; calling Cashcrow claim endpoint.");
+
     const claimResponse = await fetch(`${apiBaseUrl}/admin/coupons/claim`, {
       method: "POST",
       headers: {
@@ -199,6 +219,9 @@ export async function POST(request: Request) {
       body: JSON.stringify({ couponCode: claimCode }),
       cache: "no-store",
     });
+    console.info(
+      `[voucher-claim] Cashcrow claim endpoint responded with status ${claimResponse.status} in ${Date.now() - claimStartedAt}ms.`,
+    );
     const claimBody = await readJson(claimResponse);
 
     if (!claimResponse.ok || !claimBody.coupon) {
