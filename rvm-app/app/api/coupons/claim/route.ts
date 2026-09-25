@@ -13,8 +13,8 @@ type CashcrowResponse = {
 };
 
 const errorMessages: Record<string, string> = {
-  VALIDATION_ERROR: "Admission number or employee ID must be 3–5 digits.",
-  validation: "Admission number or employee ID must be 3–5 digits.",
+  VALIDATION_ERROR: "Enter a 3-digit employee ID or 5-digit admission number.",
+  validation: "Enter a 3-digit employee ID or 5-digit admission number.",
   COUPON_NOT_FOUND: "We could not find that voucher.",
   COUPON_ALREADY_CLAIMED: "This voucher has already been claimed.",
   COUPON_NOT_CLAIMABLE: "This voucher has expired, was voided, or cannot be claimed.",
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
   if (
     couponCode.length < 6 ||
     couponCode.length > 96 ||
-    !/^\d{3,5}$/.test(admissionNumber)
+    !/^(?:\d{3}|\d{5})$/.test(admissionNumber)
   ) {
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: errorMessages.VALIDATION_ERROR },

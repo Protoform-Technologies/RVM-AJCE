@@ -278,8 +278,8 @@ export default function CashcrowRewardPage() {
 
     const admission = admissionNumber.trim();
 
-    if (!/^\d{3,5}$/.test(admission)) {
-      setError('Admission number or employee ID must be 3–5 digits.');
+    if (!/^(?:\d{3}|\d{5})$/.test(admission)) {
+      setError('Enter a 3-digit employee ID or 5-digit admission number.');
       return;
     }
 
@@ -693,7 +693,7 @@ export default function CashcrowRewardPage() {
                     name="admissionNumber"
                     type="text"
                     inputMode="numeric"
-                    pattern="[0-9]*"
+                    pattern="(?:[0-9]{3}|[0-9]{5})"
                     autoComplete="off"
                     autoCapitalize="none"
                     placeholder="e.g. 123 or 12345"

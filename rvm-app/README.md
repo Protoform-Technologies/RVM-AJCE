@@ -1,7 +1,7 @@
 # Cashcrow RVM voucher claim frontend
 
 This Next.js app opens a printed RVM voucher deep link, verifies that the voucher
-is `ISSUED`, collects a 3–5 digit admission number or employee ID, claims the voucher, and
+is `ISSUED`, collects a 3-digit employee ID or 5-digit admission number, claims the voucher, and
 displays the confirmed reward amount. If the page is opened without a valid
 `couponcode` query parameter, it shows a camera QR scanner instead.
 
@@ -51,7 +51,7 @@ forward to `https://api.cashcrow.co.in/api/v1/rvm/admin/coupons/...` with the
 server-only credentials and configured claim origin.
 
 On admission-number submission, the claim handler sends exactly one backend
-request containing both `couponCode` and the 3–5 digit `admissionNumber` to the
+request containing both `couponCode` and the 3- or 5-digit `admissionNumber` to the
 Cashcrow claim endpoint. Cashcrow validates voucher status and performs the
 AJCE food-court credit as part of that operation, so this frontend does not
 call AJCE directly.
