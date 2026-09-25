@@ -1,11 +1,15 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ArrowRight, GraduationCap, Leaf, LoaderCircle, RefreshCw, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { QrScanner } from '@/app/components/qr-scanner';
+import {
+  VoucherClaimedNotice,
+  VoucherErrorNotice,
+} from '@/app/components/voucher-claimed-notice';
 import {
   CLAIMED_COUPON_STORAGE_KEY,
   type ClaimCouponResponse,
@@ -25,7 +29,7 @@ const getServerPageUrl = () => undefined;
 type LookupState =
   | { status: 'loading' }
   | { status: 'ready'; coupon: Coupon }
-  | { status: 'error'; message: string };
+  | { status: 'error'; message: string; kind?: VoucherOutcomeKind };
 
 type LookupApiResult =
   | { success: true; coupon: Coupon }
@@ -95,6 +99,23 @@ function cacheApiError(
       result.message ?? 'This voucher cannot be claimed.',
     );
   }
+
+  return outcome;
+}
+
+function voucherErrorTitle(kind?: VoucherOutcomeKind) {
+  switch (kind) {
+    case 'EXPIRED':
+      return 'Voucher expired';
+    case 'VOID':
+      return 'Voucher voided';
+    case 'NOT_FOUND':
+      return 'Voucher not found';
+    case 'NOT_CLAIMABLE':
+      return 'Voucher cannot be claimed';
+    default:
+      return 'Unable to verify voucher';
+  }
 }
 
 function cacheCouponAliases(
@@ -134,6 +155,8 @@ export default function CashcrowRewardPage() {
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const submissionStartedRef = useRef(false);
 
   useEffect(() => {
     if (!couponCode || cachedOutcome) {
@@ -170,10 +193,11 @@ export default function CashcrowRewardPage() {
         }
 
         if (!result.success) {
-          cacheApiError(voucherCode, result);
+          const outcome = cacheApiError(voucherCode, result);
           setLookup({
             status: 'error',
             message: result.message ?? 'This voucher could not be verified.',
+            kind: outcome,
           });
           return;
         }
@@ -196,6 +220,7 @@ export default function CashcrowRewardPage() {
           setLookup({
             status: 'error',
             message: 'This voucher has already been claimed. Scan another voucher.',
+            kind: 'CLAIMED',
           });
           return;
         }
@@ -210,6 +235,7 @@ export default function CashcrowRewardPage() {
           setLookup({
             status: 'error',
             message: 'This voucher has expired. Scan another voucher.',
+            kind: 'EXPIRED',
           });
           return;
         }
@@ -224,6 +250,7 @@ export default function CashcrowRewardPage() {
           setLookup({
             status: 'error',
             message: 'This voucher has been voided and cannot be claimed. Scan another voucher.',
+            kind: 'VOID',
           });
           return;
         }
@@ -257,6 +284,13 @@ export default function CashcrowRewardPage() {
       return;
     }
 
+    if (submissionStartedRef.current) {
+      return;
+    }
+
+    submissionStartedRef.current = true;
+    setHasSubmitted(true);
+
     setError('');
     setIsSubmitting(true);
 
@@ -284,9 +318,17 @@ export default function CashcrowRewardPage() {
       }
 
       if (!result.success) {
-        if (couponCode) {
-          cacheApiError(couponCode, result);
+        const outcome = couponCode ? cacheApiError(couponCode, result) : undefined;
+
+        if (outcome === 'CLAIMED') {
+          setLookup({
+            status: 'error',
+            message: result.message ?? 'This voucher has already been claimed.',
+            kind: 'CLAIMED',
+          });
+          return;
         }
+
         setError(result.message ?? 'The voucher could not be claimed. Please try again.');
         return;
       }
@@ -330,7 +372,16 @@ export default function CashcrowRewardPage() {
   }
 
   if (cachedOutcome) {
-    return <QrScanner message={cachedOutcome.message} />;
+    if (cachedOutcome.kind === 'CLAIMED') {
+      return <VoucherClaimedNotice message={cachedOutcome.message} />;
+    }
+
+    return (
+      <VoucherErrorNotice
+        message={cachedOutcome.message}
+        title={voucherErrorTitle(cachedOutcome.kind)}
+      />
+    );
   }
 
   if (lookup.status === 'loading') {
@@ -351,7 +402,16 @@ export default function CashcrowRewardPage() {
   }
 
   if (lookup.status === 'error') {
-    return <QrScanner message={lookup.message} />;
+    if (lookup.kind === 'CLAIMED') {
+      return <VoucherClaimedNotice message={lookup.message} />;
+    }
+
+    return (
+      <VoucherErrorNotice
+        message={lookup.message}
+        title={voucherErrorTitle(lookup.kind)}
+      />
+    );
   }
 
   return (
@@ -647,7 +707,7 @@ export default function CashcrowRewardPage() {
                     required
                     minLength={3}
                     maxLength={5}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || hasSubmitted}
                   />
                 </div>
 
@@ -666,10 +726,16 @@ export default function CashcrowRewardPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#003f2b] bg-[#007a52] px-4 py-3.5 text-lg font-black text-white shadow-[0_4px_0_0_#063324] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-70 disabled:shadow-none"
+              disabled={isSubmitting || hasSubmitted}
+              className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#003f2b] bg-[#007a52] px-4 py-3.5 text-lg font-black text-white shadow-[0_4px_0_0_#063324] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-70 disabled:shadow-none"
             >
-              <span>{isSubmitting ? 'Claiming reward…' : 'Claim my reward'}</span>
+              <span>
+                {isSubmitting
+                  ? 'Claiming reward…'
+                  : hasSubmitted
+                    ? 'Claim request sent'
+                    : 'Claim my reward'}
+              </span>
 
               {isSubmitting ? (
                 <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin" />

@@ -7,13 +7,66 @@ import QrScannerEngine from "qr-scanner";
 
 import { extractVoucherCode } from "@/lib/voucher-code";
 
+const BACK_CAMERA_REQUIRED = "BACK_CAMERA_REQUIRED";
+const BACK_CAMERA_LABEL = /back|rear|environment|world|traseira|trasera|arrière|hinten|后置|後置|背面/i;
+
+type RequiredCamera = {
+  id: string;
+  verifyAsBackCamera: boolean;
+};
+
+async function getRequiredCamera(): Promise<RequiredCamera> {
+  let probeStream: MediaStream | null = null;
+
+  try {
+    // `exact` prevents mobile browsers from silently selecting the front camera.
+    probeStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { exact: "environment" } },
+    });
+    const deviceId = probeStream.getVideoTracks()[0]?.getSettings().deviceId;
+    return {
+      id: deviceId || "environment",
+      verifyAsBackCamera: true,
+    };
+  } catch (reason) {
+    if (
+      reason instanceof DOMException
+      && (reason.name === "NotAllowedError" || reason.name === "SecurityError")
+    ) {
+      throw reason;
+    }
+  } finally {
+    probeStream?.getTracks().forEach((track) => track.stop());
+  }
+
+  const cameras = await QrScannerEngine.listCameras(true);
+
+  // A laptop or desktop with only one camera may use its front-facing webcam.
+  if (cameras.length === 1) {
+    return { id: cameras[0].id, verifyAsBackCamera: false };
+  }
+
+  const backCamera = cameras.find((camera) => BACK_CAMERA_LABEL.test(camera.label));
+
+  if (backCamera) {
+    return { id: backCamera.id, verifyAsBackCamera: true };
+  }
+
+  if (cameras.length > 1) {
+    throw new Error(BACK_CAMERA_REQUIRED);
+  }
+
+  throw new Error("No camera available");
+}
+
 function openClaimPage(code: string) {
   const url = new URL(window.location.origin);
   url.searchParams.set("couponcode", code);
   window.location.assign(url.toString());
 }
 
-export function QrScanner({ message }: { message?: string }) {
+export function QrScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [manualValue, setManualValue] = useState("");
   const [scannerError, setScannerError] = useState("");
@@ -38,6 +91,8 @@ export function QrScanner({ message }: { message?: string }) {
           throw new Error("No camera available");
         }
 
+        const requiredCamera = await getRequiredCamera();
+
         scanner = new QrScannerEngine(
           videoRef.current,
           (result) => {
@@ -52,13 +107,29 @@ export function QrScanner({ message }: { message?: string }) {
             openClaimPage(code);
           },
           {
-            preferredCamera: "environment",
+            preferredCamera: requiredCamera.id,
             maxScansPerSecond: 10,
             returnDetailedScanResult: true,
           },
         );
 
         await scanner.start();
+
+        if (requiredCamera.verifyAsBackCamera) {
+          const stream = videoRef.current.srcObject;
+          const settings = stream instanceof MediaStream
+            ? stream.getVideoTracks()[0]?.getSettings()
+            : undefined;
+          const selectedRequiredCamera = requiredCamera.id === "environment"
+            ? settings?.facingMode === "environment"
+            : settings?.deviceId === requiredCamera.id;
+
+          if (!selectedRequiredCamera) {
+            scanner.destroy();
+            scanner = null;
+            throw new Error(BACK_CAMERA_REQUIRED);
+          }
+        }
 
         if (cancelled) {
           scanner.destroy();
@@ -68,11 +139,15 @@ export function QrScanner({ message }: { message?: string }) {
       } catch (reason) {
         if (!cancelled) {
           const permissionDenied = reason instanceof DOMException
-            && reason.name === "NotAllowedError";
+            && (reason.name === "NotAllowedError" || reason.name === "SecurityError");
+          const backCameraUnavailable = reason instanceof Error
+            && reason.message === BACK_CAMERA_REQUIRED;
           setScannerError(
             permissionDenied
               ? "Camera permission was denied. Allow camera access, then reload, or enter the printed code below."
-              : "No camera was available. Enter the printed DRSV code below.",
+              : backCameraUnavailable
+                ? "A back camera could not be selected. Enter the printed DRSV code below."
+                : "No camera was available. Enter the printed DRSV code below.",
           );
           setIsStarting(false);
         }
@@ -127,12 +202,6 @@ export function QrScanner({ message }: { message?: string }) {
             Point your camera at the QR code printed on your Cashcrow voucher.
           </p>
         </section>
-
-        {message && (
-          <p role="alert" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900">
-            {message}
-          </p>
-        )}
 
         <section aria-label="QR code scanner" className="relative mt-5 aspect-square w-full overflow-hidden rounded-[2rem] border-2 border-[#003f2b] bg-[#082e21] shadow-[0_6px_0_0_#063324]">
           <video
