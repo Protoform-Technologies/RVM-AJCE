@@ -18,7 +18,7 @@ type AesOfferResponse = {
 };
 
 const errorMessages: Record<string, string> = {
-  VALIDATION_ERROR: "Enter a valid voucher code.",
+  VALIDATION_ERROR: "Enter a valid voucher code and admission number or employee ID.",
   COUPON_NOT_FOUND: "We could not find that voucher.",
   COUPON_ALREADY_CLAIMED: "This voucher has already been claimed.",
   COUPON_NOT_CLAIMABLE: "This voucher has expired, was voided, or cannot be claimed.",
@@ -66,6 +66,8 @@ function upstreamError(
 }
 
 export async function POST(request: Request) {
+  console.log("[voucher-claim:v2] Request received.");
+
   let payload: unknown;
 
   try {
@@ -83,13 +85,13 @@ export async function POST(request: Request) {
       : "";
   const admissionNumber =
     typeof payload === "object" && payload !== null && "admissionNumber" in payload
-      ? String(payload.admissionNumber).trim().toUpperCase()
+      ? String(payload.admissionNumber).trim()
       : "";
 
   if (
     couponCode.length < 6 ||
     couponCode.length > 96 ||
-    !/^AJC\d{2}[A-Z]{2}\d{3}$/.test(admissionNumber)
+    !/^\d{3,5}$/.test(admissionNumber)
   ) {
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: errorMessages.VALIDATION_ERROR },
@@ -169,7 +171,7 @@ export async function POST(request: Request) {
     }
 
     const offerStartedAt = Date.now();
-    console.info("[voucher-claim] Calling AJCE offer endpoint.");
+    console.log("[voucher-claim:v2] Calling AJCE offer endpoint.");
 
     const offerResponse = await fetch(aesStockApiUrl, {
       method: "POST",
@@ -181,8 +183,8 @@ export async function POST(request: Request) {
       }),
       cache: "no-store",
     });
-    console.info(
-      `[voucher-claim] AJCE offer endpoint responded with status ${offerResponse.status} in ${Date.now() - offerStartedAt}ms.`,
+    console.log(
+      `[voucher-claim:v2] AJCE offer endpoint responded with status ${offerResponse.status} in ${Date.now() - offerStartedAt}ms.`,
     );
     let offerBody: AesOfferResponse = {};
 
@@ -208,7 +210,7 @@ export async function POST(request: Request) {
 
     const claimCode = lookupBody.coupon.voucherQr || lookupBody.coupon.couponCode;
     const claimStartedAt = Date.now();
-    console.info("[voucher-claim] AJCE offer succeeded; calling Cashcrow claim endpoint.");
+    console.log("[voucher-claim:v2] AJCE offer succeeded; calling Cashcrow claim endpoint.");
 
     const claimResponse = await fetch(`${apiBaseUrl}/admin/coupons/claim`, {
       method: "POST",
@@ -219,8 +221,8 @@ export async function POST(request: Request) {
       body: JSON.stringify({ couponCode: claimCode }),
       cache: "no-store",
     });
-    console.info(
-      `[voucher-claim] Cashcrow claim endpoint responded with status ${claimResponse.status} in ${Date.now() - claimStartedAt}ms.`,
+    console.log(
+      `[voucher-claim:v2] Cashcrow claim endpoint responded with status ${claimResponse.status} in ${Date.now() - claimStartedAt}ms.`,
     );
     const claimBody = await readJson(claimResponse);
 
@@ -244,7 +246,12 @@ export async function POST(request: Request) {
         message: claimBody.message ?? "Coupon claimed",
         coupon: { ...lookupBody.coupon, ...claimBody.coupon },
       },
-      { headers: { "Cache-Control": "no-store" } },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+          "X-Claim-Flow-Version": "ajce-v2",
+        },
+      },
     );
   } catch (error) {
     console.error("Cashcrow voucher claim failed.", error);

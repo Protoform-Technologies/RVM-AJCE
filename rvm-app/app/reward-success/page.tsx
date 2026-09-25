@@ -195,9 +195,9 @@ export default function RewardSuccessPage() {
                         Coupon claimed. Reward unlocked.
                     </p>
 
-                    {/* Student ID */}
+                    {/* Admission number or employee ID */}
                     <p className="mt-3 rounded-full border border-[#a2cfb7] bg-[#e8f3e5] px-4 py-1.5 text-xs font-bold text-[#082e21]">
-                        Student ID: {coupon.admissionNumber}
+                        Admission / Employee ID: {coupon.admissionNumber}
                     </p>
                 </section>
 

@@ -250,10 +250,10 @@ export default function CashcrowRewardPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const admission = admissionNumber.trim().toUpperCase();
+    const admission = admissionNumber.trim();
 
-    if (!/^AJC\d{2}[A-Z]{2}\d{3}$/.test(admission)) {
-      setError('Invalid admission number. Example: AJC23CS054');
+    if (!/^\d{3,5}$/.test(admission)) {
+      setError('Enter a valid admission number or employee ID.');
       return;
     }
 
@@ -588,7 +588,7 @@ export default function CashcrowRewardPage() {
           </h2>
 
           <p className="mb-5 mt-1 text-sm font-medium leading-relaxed text-[#527063]">
-            Voucher <span className="font-bold text-[#0f2e24]">{lookup.coupon.couponCode}</span> is ready. Enter your admission number to continue.
+            Voucher <span className="font-bold text-[#0f2e24]">{lookup.coupon.couponCode}</span> is ready. Enter your admission number or employee ID to continue.
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -597,7 +597,7 @@ export default function CashcrowRewardPage() {
                 htmlFor="admission"
                 className="text-sm font-extrabold text-[#0f2e24]"
               >
-                Admission number
+                Admission number / Employee ID
               </label>
 
               {/* Input + Error */}
@@ -624,13 +624,14 @@ export default function CashcrowRewardPage() {
                     id="admission"
                     name="admissionNumber"
                     type="text"
-                    inputMode="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     autoComplete="off"
-                    autoCapitalize="characters"
-                    placeholder="e.g. AJC23CS054"
+                    autoCapitalize="none"
+                    placeholder="e.g. 123 or 13905"
                     value={admissionNumber}
                     onChange={(event) => {
-                      setAdmissionNumber(event.target.value.toUpperCase());
+                      setAdmissionNumber(event.target.value.replace(/\D/g, '').slice(0, 5));
 
                       // Remove error while typing
                       if (error) {
@@ -644,8 +645,8 @@ export default function CashcrowRewardPage() {
                       : 'border-gray-200 focus:border-[#0b4d36] focus:ring-[#0b4d36]'
                       } focus:ring-1`}
                     required
-                    minLength={10}
-                    maxLength={10}
+                    minLength={3}
+                    maxLength={5}
                     disabled={isSubmitting}
                   />
                 </div>
