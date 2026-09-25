@@ -323,8 +323,15 @@ export default function RewardSuccessPage() {
                 {/* Secondary Navigation */}
                 <nav
                     aria-label="Secondary actions"
-                    className="mb-2 mt-6 flex w-full justify-center"
+                    className="mb-2 mt-6 flex w-full flex-col items-center gap-4"
                 >
+                    <a
+                        href="https://forms.gle/bT28PE7tpB6dhCATA"
+                        className="flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-[#003f2b] bg-[#007a52] px-4 py-3.5 text-lg font-black text-white shadow-[0_4px_0_0_#063324] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007a52] focus-visible:ring-offset-2 active:translate-y-1 active:shadow-none"
+                    >
+                        Share feedback
+                    </a>
+
                     <button
                         type="button"
                         onClick={() => {
