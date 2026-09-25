@@ -88,7 +88,6 @@ function cacheApiError(
     COUPON_ALREADY_CLAIMED: 'CLAIMED',
     COUPON_NOT_FOUND: 'NOT_FOUND',
     COUPON_NOT_CLAIMABLE: 'NOT_CLAIMABLE',
-    CLAIM_FAILED_AFTER_OFFER: 'NOT_CLAIMABLE',
   };
   const outcome = result.error ? outcomeByError[result.error] : undefined;
 
@@ -280,7 +279,7 @@ export default function CashcrowRewardPage() {
     const admission = admissionNumber.trim();
 
     if (!/^\d{3,5}$/.test(admission)) {
-      setError('Enter a valid admission number or employee ID.');
+      setError('Admission number or employee ID must be 3–5 digits.');
       return;
     }
 
@@ -327,6 +326,15 @@ export default function CashcrowRewardPage() {
             kind: 'CLAIMED',
           });
           return;
+        }
+
+        if (
+          result.error === 'AES_AJCE_CREDIT_FAILED'
+          || result.error === 'VALIDATION_ERROR'
+          || result.error === 'validation'
+        ) {
+          submissionStartedRef.current = false;
+          setHasSubmitted(false);
         }
 
         setError(result.message ?? 'The voucher could not be claimed. Please try again.');
@@ -688,7 +696,7 @@ export default function CashcrowRewardPage() {
                     pattern="[0-9]*"
                     autoComplete="off"
                     autoCapitalize="none"
-                    placeholder="e.g. 123 or 13905"
+                    placeholder="e.g. 123 or 12345"
                     value={admissionNumber}
                     onChange={(event) => {
                       setAdmissionNumber(event.target.value.replace(/\D/g, '').slice(0, 5));
@@ -733,7 +741,7 @@ export default function CashcrowRewardPage() {
                 {isSubmitting
                   ? 'Claiming reward…'
                   : hasSubmitted
-                    ? 'Claim request sent'
+                    ? error ? 'Claim unavailable' : 'Claim request sent'
                     : 'Claim my reward'}
               </span>
 

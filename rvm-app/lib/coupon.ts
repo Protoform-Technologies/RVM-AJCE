@@ -14,6 +14,8 @@ export type Coupon = {
   issuedAt?: string;
   claimedAt: string | null;
   expiresAt?: string;
+  admissionNumber?: string;
+  aesCreditedAt?: string | null;
 };
 
 export type ClaimCouponResponse = {

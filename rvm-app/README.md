@@ -1,7 +1,7 @@
 # Cashcrow RVM voucher claim frontend
 
 This Next.js app opens a printed RVM voucher deep link, verifies that the voucher
-is `ISSUED`, collects the student admission number, claims the voucher, and
+is `ISSUED`, collects a 3–5 digit admission number or employee ID, claims the voucher, and
 displays the confirmed reward amount. If the page is opened without a valid
 `couponcode` query parameter, it shows a camera QR scanner instead.
 
@@ -14,8 +14,6 @@ CASHCROW_CLAIM_USERNAME=your_claim_username
 CASHCROW_CLAIM_PASSWORD=your_claim_password
 CASHCROW_RVM_API_BASE_URL=https://api.cashcrow.co.in/api/v1/rvm
 CASHCROW_CLAIM_ORIGIN=https://claim.cashcrow.co.in
-AES_STOCK_API_KEY=your_aes_stock_api_key
-AES_STOCK_API_URL=https://stock.aesajce.in/offers/cashcrow
 ```
 
 There is no user login gate. The browser calls same-origin Next.js route
@@ -52,15 +50,15 @@ The browser calls `/api/coupons/lookup` and `/api/coupons/claim`. These handlers
 forward to `https://api.cashcrow.co.in/api/v1/rvm/admin/coupons/...` with the
 server-only credentials and configured claim origin.
 
-On admission-number submission, the claim handler verifies that the voucher is
-still `ISSUED`, creates the AES offer using the server-only API key, and calls
-the Cashcrow claim endpoint only after the AES API returns a successful HTTP
-status. The amount sent to the AES offer API is always the `amount` returned by
-the Cashcrow coupon lookup; it is never supplied by the browser or a fixed
-frontend/server configuration value.
+On admission-number submission, the claim handler sends exactly one backend
+request containing both `couponCode` and the 3–5 digit `admissionNumber` to the
+Cashcrow claim endpoint. Cashcrow validates voucher status and performs the
+AJCE food-court credit as part of that operation, so this frontend does not
+call AJCE directly.
 
-The documented backend does not currently accept or persist the admission
-number; it is retained only for the current browser confirmation.
+Cashcrow returns the persisted `admissionNumber` and `aesCreditedAt` after a
+successful claim. Backend idempotency prevents a second successful AJCE credit
+for the same voucher.
 
 ## Learn More
 
