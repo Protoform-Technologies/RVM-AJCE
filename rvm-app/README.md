@@ -60,6 +60,13 @@ Cashcrow returns the persisted `admissionNumber` and `aesCreditedAt` after a
 successful claim. Backend idempotency prevents a second successful AJCE credit
 for the same voucher.
 
+## Public leaderboard
+
+Open `/leaderboard` to see the public AJCE recycling leaderboard. The page
+loads the top 10 entries through the same-origin `/api/leaderboard` route. That
+route forwards to the public Cashcrow endpoint at
+`/api/v1/rvm/ajce/leaderboard?limit=10` without sending claim credentials.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
