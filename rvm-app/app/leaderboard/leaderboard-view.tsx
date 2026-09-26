@@ -353,7 +353,7 @@ function PodiumPlace({ entry }: { entry: LeaderboardEntry }) {
           <span aria-hidden="true" className={`absolute inset-x-0 top-0 h-[38%] bg-gradient-to-b ${podiumStyle.baseHighlight}`} />
           <span aria-hidden="true" className="absolute inset-y-0 left-[28%] w-px bg-white/18" />
           <span aria-hidden="true" className="absolute inset-y-0 right-[28%] w-px bg-black/8" />
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 right-2 flex items-center justify-center">
             <span className={`font-black italic leading-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.15)] ${podiumStyle.number}`}>
               {podiumStyle.numeral}
             </span>
@@ -383,7 +383,7 @@ function Podium({ entries }: { entries: LeaderboardEntry[] }) {
       <div aria-hidden="true" className="pointer-events-none absolute -right-10 top-10 h-28 w-28 rounded-full bg-[#f5efe2]/55 blur-3xl" />
 
       <div className="relative text-center">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007a52]">Cashcrow Champion</p>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007a52]">Top Live Contenders</p>
         <p className="mt-1 text-[11px] font-semibold text-[#6a7f77]">Final champion will be announced after the campaign ends.</p>
       </div>
 
