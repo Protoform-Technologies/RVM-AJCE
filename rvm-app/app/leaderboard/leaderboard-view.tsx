@@ -45,13 +45,19 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
 
 const CAMPAIGN_TOTAL_DAYS = 3;
 const CAMPAIGN_DAYS_COMPLETED = 1;
-const CAMPAIGN_PROGRESS = Math.min(
-  100,
-  Math.round((CAMPAIGN_DAYS_COMPLETED / CAMPAIGN_TOTAL_DAYS) * 100),
+
+// Everything in the race visual is derived from the two values above.
+// Example: CAMPAIGN_DAYS_COMPLETED = 3 => 43% progress on a 7-day campaign.
+const CAMPAIGN_COMPLETED_DAYS = Math.min(
+  Math.max(CAMPAIGN_DAYS_COMPLETED, 0),
+  Math.max(CAMPAIGN_TOTAL_DAYS, 1),
 );
+const CAMPAIGN_PROGRESS =
+  (CAMPAIGN_COMPLETED_DAYS / Math.max(CAMPAIGN_TOTAL_DAYS, 1)) * 100;
+const CAMPAIGN_PROGRESS_LABEL = Math.round(CAMPAIGN_PROGRESS);
 
 function CampaignProgress() {
-  const daysRemaining = Math.max(0, CAMPAIGN_TOTAL_DAYS - CAMPAIGN_DAYS_COMPLETED);
+  const daysRemaining = Math.max(0, CAMPAIGN_TOTAL_DAYS - CAMPAIGN_COMPLETED_DAYS);
 
   return (
     <section
@@ -64,32 +70,93 @@ function CampaignProgress() {
             Campaign progress
           </p>
           <p className="mt-1 text-lg font-black tracking-tight text-[#102f25] sm:text-xl">
-            Day {CAMPAIGN_DAYS_COMPLETED} complete
+            Day {CAMPAIGN_COMPLETED_DAYS} complete
           </p>
         </div>
-        <span className="shrink-0 text-sm font-black tabular-nums text-[#007a52] sm:text-base">
-          {CAMPAIGN_PROGRESS}%
-        </span>
+        <div className="rounded-full bg-[#007a52]/10 border border-[#007a52] px-2">
+          <span className="shrink-0 text-sm font-black tabular-nums text-[#007a52] sm:text-base">
+            {CAMPAIGN_PROGRESS_LABEL}%
+          </span>
+        </div>
+
       </div>
 
-      <div
-        className="mt-3 h-3 overflow-hidden rounded-full bg-[#e4ece7]"
-        role="progressbar"
-        aria-label={`${CAMPAIGN_DAYS_COMPLETED} of ${CAMPAIGN_TOTAL_DAYS} campaign days completed`}
-        aria-valuemin={0}
-        aria-valuemax={CAMPAIGN_TOTAL_DAYS}
-        aria-valuenow={CAMPAIGN_DAYS_COMPLETED}
-      >
+      {/*
+        Dynamic race bar: the green fill and runner position both use
+        CAMPAIGN_PROGRESS. The trophy stays fixed at the 100% finish line.
+      */}
+      <div className="relative h-40 w-full sm:h-48">
+        {/* Track shadow */}
         <div
-          className="h-full rounded-full bg-[linear-gradient(90deg,#007a52_0%,#20a56f_72%,#bdf354_100%)] transition-[width] duration-700 ease-out"
-          style={{ width: `${CAMPAIGN_PROGRESS}%` }}
+          aria-hidden="true"
+          className="absolute bottom-[15px] left-1 right-[3.75rem] h-9 rounded-full bg-black/10 blur-[7px] sm:right-[4.75rem]"
         />
+
+        {/* Main metallic track */}
+        <div
+          className="absolute bottom-5 left-1 right-0 h-8 overflow-hidden rounded-full border-[3px] border-[#cbd2ce] bg-[#eef1ef] shadow-[inset_0_2px_5px_rgba(255,255,255,0.95),0_3px_7px_rgba(20,50,40,0.16)] sm:h-9"
+          role="progressbar"
+          aria-label={`${CAMPAIGN_COMPLETED_DAYS} of ${CAMPAIGN_TOTAL_DAYS} campaign days completed`}
+          aria-valuemin={0}
+          aria-valuemax={CAMPAIGN_TOTAL_DAYS}
+          aria-valuenow={CAMPAIGN_COMPLETED_DAYS}
+        >
+          {/* Unfinished striped lane */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[repeating-linear-gradient(120deg,#dfe4e1_0px,#dfe4e1_8px,#bfc7c3_8px,#bfc7c3_14px)]"
+          />
+
+          {/* Completed green lane */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-y-0 left-0 overflow-hidden rounded-full bg-[linear-gradient(180deg,#8bec86_0%,#43d35a_42%,#21b746_100%)] shadow-[inset_0_3px_4px_rgba(255,255,255,0.58),inset_0_-3px_5px_rgba(0,100,35,0.18)] transition-[width] duration-700 ease-out"
+            style={{ width: `${CAMPAIGN_PROGRESS}%` }}
+          >
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-2 top-1 h-1/3 rounded-full bg-white/34 blur-[1px]"
+            />
+          </div>
+        </div>
+
+        {/* Runner moves with the campaign percentage. */}
+        {/* Animated Runner Container */}
+        {/* Animated Runner Container (Handles horizontal movement across track) */}
+        <div
+          aria-hidden="true"
+          className="absolute bottom-[18px] z-20 w-[8.5rem] -translate-x-[42%] transition-[left] duration-700 ease-out sm:bottom-[19px] sm:w-[10.5rem]"
+          style={{ left: `${CAMPAIGN_PROGRESS}%` }}
+        >
+          <Image
+            src="/assets/campaign-runner-dynamic1.png"
+            alt=""
+            width={348}
+            height={254}
+            className="h-auto w-full select-none object-contain drop-shadow-[0_8px_8px_rgba(23,53,44,0.10)] animate-[trophy-float_3s_ease-in-out_infinite]"
+          />
+        </div>
+
+        {/* Animated Trophy Container */}
+        <div
+          aria-hidden="true"
+          className="absolute bottom-2 -right-7 z-30 w-[5.9rem] sm:w-[7.4rem]"
+        >
+          <Image
+            src="/assets/campaign-trophy-dynamic1.png"
+            alt=""
+            width={233}
+            height={305}
+            /* Trophy effect: Gently floats normally, or pulses excitedly at 100% */
+            className={`h-auto w-full select-none object-contain drop-shadow-[0_8px_8px_rgba(86,63,15,0.16)] transition-transform duration-300 ${CAMPAIGN_PROGRESS >= 100
+              ? "animate-[trophy-celebrate_1s_ease-in-out_infinite] scale-110"
+              : "animate-[trophy-float_3s_ease-in-out_infinite]"
+              }`}
+          />
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2 text-xs font-semibold text-[#60766e] sm:flex-row sm:items-center sm:justify-between">
-        {/* <span>
-          {CAMPAIGN_DAYS_COMPLETED} day down · {daysRemaining} days to go
-        </span> */}
+      <div className="mt-1 flex flex-col gap-2 text-xs font-semibold text-[#60766e] sm:flex-row sm:items-center sm:justify-between">
         <span className="inline-flex items-center gap-1.5 font-bold text-[#17352c]">
           <Trophy className="h-3.5 w-3.5 text-[#b28a22]" aria-hidden="true" />
           Champion revealed after the campaign ends
@@ -316,8 +383,8 @@ function Podium({ entries }: { entries: LeaderboardEntry[] }) {
       <div aria-hidden="true" className="pointer-events-none absolute -right-10 top-10 h-28 w-28 rounded-full bg-[#f5efe2]/55 blur-3xl" />
 
       <div className="relative text-center">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007a52]">Cashcrow Champions</p>
-        {/* <p className="mt-1 text-[11px] font-semibold text-[#6a7f77]">Final champion will be announced after the campaign ends.</p> */}
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007a52]">Cashcrow Champion</p>
+        <p className="mt-1 text-[11px] font-semibold text-[#6a7f77]">Final champion will be announced after the campaign ends.</p>
       </div>
 
       <div className="relative mt-8 grid grid-cols-3 items-end gap-2 sm:mt-10 sm:gap-4">
@@ -517,7 +584,7 @@ export function LeaderboardView() {
             id="leaderboard-heading"
             className="text-[clamp(2.25rem,10vw,3.25rem)] font-black leading-[1.05] tracking-tight text-[#0f2e24]"
           >
-            <span>Campus </span>
+            <span>Cashcrow </span>
 
             <span className="relative inline-block">
               {/* Hand-painted highlight */}
@@ -533,7 +600,7 @@ export function LeaderboardView() {
                 />
               </svg>
 
-              <span className="relative z-10">legends.</span>
+              <span className="relative z-10">champions.</span>
             </span>
           </h1>
 
@@ -567,6 +634,10 @@ export function LeaderboardView() {
 
         {state.status === "ready" ? (
           <>
+            
+
+            <Podium entries={podiumEntries} />
+
             <section
               aria-label="Community impact summary"
               className="mx-auto mt-7 w-full max-w-xl overflow-hidden rounded-3xl border border-emerald-900/10 bg-white/80 p-5 shadow-sm backdrop-blur-md sm:p-6"
@@ -617,8 +688,6 @@ export function LeaderboardView() {
                 </div>
               </div>
             </section>
-
-            <Podium entries={podiumEntries} />
 
             <section className="mt-7 overflow-hidden rounded-[2rem] border border-[#d6e3da] bg-white/80 shadow-sm" aria-labelledby="standings-heading">
               <header className="flex flex-col gap-3 border-b border-[#dce7df] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
