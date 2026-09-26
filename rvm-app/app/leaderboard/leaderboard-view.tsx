@@ -43,6 +43,62 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
+const CAMPAIGN_TOTAL_DAYS = 3;
+const CAMPAIGN_DAYS_COMPLETED = 1;
+const CAMPAIGN_PROGRESS = Math.min(
+  100,
+  Math.round((CAMPAIGN_DAYS_COMPLETED / CAMPAIGN_TOTAL_DAYS) * 100),
+);
+
+function CampaignProgress() {
+  const daysRemaining = Math.max(0, CAMPAIGN_TOTAL_DAYS - CAMPAIGN_DAYS_COMPLETED);
+
+  return (
+    <section
+      aria-label="Campaign progress"
+      className="mx-auto mt-6 w-full max-w-xl rounded-3xl border border-[#d6e3da] bg-white/80 p-4 shadow-sm backdrop-blur-md sm:p-5"
+    >
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#007a52] sm:text-xs">
+            Campaign progress
+          </p>
+          <p className="mt-1 text-lg font-black tracking-tight text-[#102f25] sm:text-xl">
+            Day {CAMPAIGN_DAYS_COMPLETED} complete
+          </p>
+        </div>
+        <span className="shrink-0 text-sm font-black tabular-nums text-[#007a52] sm:text-base">
+          {CAMPAIGN_PROGRESS}%
+        </span>
+      </div>
+
+      <div
+        className="mt-3 h-3 overflow-hidden rounded-full bg-[#e4ece7]"
+        role="progressbar"
+        aria-label={`${CAMPAIGN_DAYS_COMPLETED} of ${CAMPAIGN_TOTAL_DAYS} campaign days completed`}
+        aria-valuemin={0}
+        aria-valuemax={CAMPAIGN_TOTAL_DAYS}
+        aria-valuenow={CAMPAIGN_DAYS_COMPLETED}
+      >
+        <div
+          className="h-full rounded-full bg-[linear-gradient(90deg,#007a52_0%,#20a56f_72%,#bdf354_100%)] transition-[width] duration-700 ease-out"
+          style={{ width: `${CAMPAIGN_PROGRESS}%` }}
+        />
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2 text-xs font-semibold text-[#60766e] sm:flex-row sm:items-center sm:justify-between">
+        {/* <span>
+          {CAMPAIGN_DAYS_COMPLETED} day down · {daysRemaining} days to go
+        </span> */}
+        <span className="inline-flex items-center gap-1.5 font-bold text-[#17352c]">
+          <Trophy className="h-3.5 w-3.5 text-[#b28a22]" aria-hidden="true" />
+          Champion revealed after the campaign ends
+        </span>
+      </div>
+    </section>
+  );
+}
+
 function rankStyle(rank: number) {
   if (rank === 1) {
     return {
@@ -260,7 +316,8 @@ function Podium({ entries }: { entries: LeaderboardEntry[] }) {
       <div aria-hidden="true" className="pointer-events-none absolute -right-10 top-10 h-28 w-28 rounded-full bg-[#f5efe2]/55 blur-3xl" />
 
       <div className="relative text-center">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007a52]">Recycling champions</p>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007a52]">Cashcrow Champions</p>
+        {/* <p className="mt-1 text-[11px] font-semibold text-[#6a7f77]">Final champion will be announced after the campaign ends.</p> */}
       </div>
 
       <div className="relative mt-8 grid grid-cols-3 items-end gap-2 sm:mt-10 sm:gap-4">
@@ -484,6 +541,8 @@ export function LeaderboardView() {
             You recycled. Now check the campus clout & top contenders.
           </p>
         </section>
+
+        <CampaignProgress />
 
         {state.status === "loading" ? <LoadingState /> : null}
 
