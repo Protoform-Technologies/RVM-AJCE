@@ -43,8 +43,8 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-const CAMPAIGN_TOTAL_DAYS = 3;
-const CAMPAIGN_DAYS_COMPLETED = 1;
+const CAMPAIGN_TOTAL_DAYS = 5;
+const CAMPAIGN_DAYS_COMPLETED = 2;
 
 // Everything in the race visual is derived from the two values above.
 // Example: CAMPAIGN_DAYS_COMPLETED = 3 => 43% progress on a 7-day campaign.
@@ -634,7 +634,7 @@ export function LeaderboardView() {
 
         {state.status === "ready" ? (
           <>
-            
+
 
             <Podium entries={podiumEntries} />
 
