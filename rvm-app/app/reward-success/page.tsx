@@ -9,6 +9,7 @@ import {
     LoaderCircle,
     Pencil,
     Ticket,
+    Trophy,
 } from "lucide-react";
 
 import {
@@ -16,7 +17,7 @@ import {
     type ClaimedCoupon,
 } from "@/lib/coupon";
 
-const subscribeToSessionStorage = () => () => {};
+const subscribeToSessionStorage = () => () => { };
 const getStoredCoupon = () =>
     sessionStorage.getItem(CLAIMED_COUPON_STORAGE_KEY);
 const getServerStoredCoupon = () => undefined;
@@ -346,6 +347,20 @@ export default function RewardSuccessPage() {
                         />
 
                         <span>Claim another voucher</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            router.push("/leaderboard");
+                        }}
+                        className="group inline-flex min-h-10 items-center gap-2 rounded-full border border-[#b28a22]/20 bg-[#b28a22]/5 px-4 py-2 text-xs font-bold text-[#b28a22] shadow-sm transition-all duration-200 hover:border-[#b28a22]/40 hover:bg-[#b28a22]/10 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b28a22] focus-visible:ring-offset-2 active:scale-[0.98]"
+                    >
+                        <Trophy
+                            className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-rotate-6"
+                            aria-hidden="true"
+                        />
+
+                        <span>Leaderboard</span>
                     </button>
                 </nav>
             </main>

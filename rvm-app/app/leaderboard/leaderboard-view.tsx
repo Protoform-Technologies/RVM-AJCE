@@ -44,7 +44,7 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
 });
 
 const CAMPAIGN_TOTAL_DAYS = 5;
-const CAMPAIGN_DAYS_COMPLETED = 2;
+const CAMPAIGN_DAYS_COMPLETED = 4;
 
 // Everything in the race visual is derived from the two values above.
 // Example: CAMPAIGN_DAYS_COMPLETED = 3 => 43% progress on a 7-day campaign.

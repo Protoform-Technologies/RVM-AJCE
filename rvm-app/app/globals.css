@@ -28,3 +28,26 @@ body {
   color: var(--foreground);
   font-family: "Plus Jakarta Sans", sans-serif;
 }
+
+/* 
+@keyframes trophy-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-1deg);
+  }
+}
+
+@keyframes trophy-celebrate {
+  0%, 100% {
+    transform: translateY(0) scale(1.1) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-6px) scale(1.15) rotate(-3deg);
+  }
+  75% {
+    transform: translateY(-6px) scale(1.15) rotate(3deg);
+  }
+} */
+
